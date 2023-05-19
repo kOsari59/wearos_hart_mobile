@@ -12,8 +12,11 @@ import android.net.Uri;
 import android.nfc.Tag;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.SeekBar;
 import android.widget.TextClock;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -37,15 +40,18 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity  implements MessageClient.OnMessageReceivedListener,DataClient.OnDataChangedListener, CapabilityClient.OnCapabilityChangedListener{
-    TextView tv;
+    EditText et;
     private String transcriptionNodeId = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        tv = (TextView) findViewById(R.id.textView);
+        et = (EditText) findViewById(R.id.edittext);
+
         Button bt = (Button) findViewById(R.id.button);
+
+        SeekBar seekBar = (SeekBar)findViewById(R.id.seekbar);
         bt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -65,11 +71,44 @@ public class MainActivity extends AppCompatActivity  implements MessageClient.On
                     }).start();
                     Log.d("테스트", "이건 성공");
                     Log.d("테스트", transcriptionNodeId.toString());
-                    requestTranscription("안녕".getBytes(StandardCharsets.UTF_8));
+                    requestTranscription(et.getText().toString().getBytes(StandardCharsets.UTF_8));
                 }catch (Exception e){
                     Log.d("테스트 이것은 스레드 에러", e.toString());
                 }
 
+            }
+        });
+
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                //시크바 조작중
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                //시크바 처음 터치
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                //시크바 터치가 끝 났을때
+                et.setText(String.valueOf(seekBar.getProgress()));
+            }
+        });
+
+        et.setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                if((event.getAction() == KeyEvent.ACTION_UP)){
+                    try {
+                        seekBar.setProgress(Integer.parseInt(et.getText().toString()));
+                    }catch (Exception e){
+                        seekBar.setProgress(0);
+                    }
+                    return  true;
+                }
+                return false;
             }
         });
     }
@@ -100,7 +139,7 @@ public class MainActivity extends AppCompatActivity  implements MessageClient.On
     @Override
     public void onMessageReceived(@NonNull MessageEvent messageEvent) {
         Log.d("테스트","메시지 체인지" + messageEvent.toString());
-        tv.setText(new String(messageEvent.getData(), StandardCharsets.UTF_8));
+        Toast.makeText(this,new String(messageEvent.getData(), StandardCharsets.UTF_8),Toast.LENGTH_LONG);
     }
 
     @Override
@@ -118,7 +157,7 @@ public class MainActivity extends AppCompatActivity  implements MessageClient.On
 
     //메시지 전달 세팅
 
-
+    //보낼 기기 찾기
     private void getnode() throws ExecutionException, InterruptedException {
         List<Node> connectedNodes = Tasks.await(Wearable.getNodeClient(this).getConnectedNodes());
 
